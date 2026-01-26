@@ -18,8 +18,3 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = None
     tasks: List[TaskBase] = []
     user_ids: List[int] = []
-
-class ProjectList(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    
-    projects: List[ProjectBase]

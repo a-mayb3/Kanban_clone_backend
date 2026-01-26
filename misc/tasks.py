@@ -20,7 +20,3 @@ class TaskBase(BaseModel):
     description: Optional[str] = None
     status: TaskStatus = TaskStatus.PENDING
 
-class TaskList(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    
-    tasks: List[TaskBase]

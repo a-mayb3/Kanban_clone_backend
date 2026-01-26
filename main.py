@@ -7,9 +7,9 @@ import models
 from database import SessionLocal, engine
 from sqlalchemy.orm import Session, joinedload
 
-from misc.tasks import TaskBase, TaskList
+from misc.tasks import TaskBase
 from misc.users import UserBase
-from misc.projects import ProjectBase, ProjectCreate, ProjectList
+from misc.projects import ProjectBase, ProjectCreate
 
 app = FastAPI()
 

@@ -1,8 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 
-from tasks import TaskBase
-from users import UserBase
+from misc.tasks import TaskBase
+from misc.users import UserBase
 
 class ProjectBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)

@@ -1,5 +1,6 @@
 from sqlalchemy import Column, ForeignKey, String, Integer, Table
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.sqlite import BLOB
 from database import Base
 from typing import Optional, List
 
@@ -16,6 +17,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
+    password_hash = Column(BLOB)
     projects = relationship("Project", secondary=project_user, back_populates="users")
 
 class Project(Base):

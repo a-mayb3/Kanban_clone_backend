@@ -1,7 +1,6 @@
 from sqlalchemy import Column, ForeignKey, String, Integer, Table
 from sqlalchemy.orm import relationship
 from database import Base
-from pydantic import BaseModel
 from typing import Optional, List
 
 project_user = Table(

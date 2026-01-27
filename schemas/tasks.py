@@ -16,3 +16,9 @@ class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     status: TaskStatus = TaskStatus.PENDING
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[TaskStatus] = None
+

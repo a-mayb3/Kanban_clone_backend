@@ -1,9 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
 from typing import List, Annotated, Optional
-import models
-from database import SessionLocal, engine
-from sqlalchemy.orm import Session, joinedload
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
@@ -19,4 +16,3 @@ class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
     status: TaskStatus = TaskStatus.PENDING
-

@@ -8,3 +8,7 @@ app = FastAPI()
 app.include_router(tasks_router)
 app.include_router(projects_router)
 
+"""ping pong :)"""
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}

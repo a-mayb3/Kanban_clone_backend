@@ -18,3 +18,13 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = None
     tasks: List[TaskBase] = []
     user_ids: List[int] = []
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class ProjectAddUsers(BaseModel):
+    user_ids: List[int] = []
+
+class ProjectRemoveUsers(BaseModel):
+    user_ids: List[int] = []

@@ -23,11 +23,13 @@ def get_me(request: Request, db: db_dependency):
         payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         user_id: str = str(payload.get("sub"))
         if user_id is None:
+            request.cookies.clear() ## removing invalid auth cookie
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not logged in"
             )
     except JWTError:
+        request.cookies.clear() ## removing invalid auth cookie
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
@@ -35,6 +37,7 @@ def get_me(request: Request, db: db_dependency):
     
     db_user = db.query(models.User).filter(models.User.id == int(user_id)).first()
     if db_user is None:
+        request.cookies.clear() ## removing invalid auth cookie
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"
@@ -42,7 +45,7 @@ def get_me(request: Request, db: db_dependency):
     return db_user
 
 
-@router.post("/logout")
+@router.get("/logout", tags=["me", "auth"])
 def logout(request: Request,response: Response):
     """Logout by clearing the JWT cookie"""
     
@@ -96,5 +99,4 @@ def delete_me(request: Request, db: db_dependency):
 
     ## Logout user by clearing cookie
     request.cookies.clear()
-
     return {"message": "User deleted successfully"}

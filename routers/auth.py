@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 import models
 
 import schemas.users as user_schemas
-import routers.users as user_router
 
 from pyargon2 import hash
 

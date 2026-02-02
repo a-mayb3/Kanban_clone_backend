@@ -1,3 +1,4 @@
+import os
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
 from database import db_dependency
@@ -7,9 +8,10 @@ import models
 import schemas.users as users
 import schemas.projects as projects
 
+from pyargon2 import hash
+import pyargon2
+
 router = APIRouter(prefix="/users", tags=["users"])
-
-
 
 """Get a user by ID"""
 
@@ -28,8 +30,8 @@ def update_user(user_id: int, user: users.UserBase, db: db_dependency):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    db_user.name = user.name
-    db_user.email = user.email
+    setattr(db_user, "name", user.name)
+    setattr(db_user, "email", user.email)
     db.commit()
     db.refresh(db_user)
     return db_user
@@ -52,12 +54,31 @@ def read_projects_from_user(user_id: int, db: db_dependency):
 """Create a new user"""
 
 @router.post("/", response_model=users.UserBase)
-def create_user(user: users.UserBase, db: db_dependency):
+def create_user(user: users.UserCreate, db: db_dependency):
+    
+    user_salt = os.urandom(32).hex()
+    print("Generated salt:", user_salt)
+    
+    hashed_password = hash(password=user.password, salt=user_salt, variant="id")
+    
     db_user = models.User(
         name=user.name,
-        email=user.email
+        email=user.email,
+        password_hash=hashed_password,
+        password_salt=user_salt
     )
+
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
+@router.delete("/{user_id}")
+def delete_user(user_id: int, db: db_dependency):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(db_user)
+    db.commit()
+    return {"detail": "User deleted"}
+

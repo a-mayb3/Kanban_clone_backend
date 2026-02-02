@@ -27,6 +27,38 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def check_for_valid_token(request: Request, db: db_dependency) -> models.User :
+    """Helper function to check for valid JWT token in cookies"""
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Not logged in"
+        )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = str(payload.get("sub"))
+        if user_id is None:
+            request.cookies.clear() ## removing invalid auth cookie
+            raise HTTPException(
+                status_code=401,
+                detail="Not logged in"
+            )
+        db_user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+        if db_user is None:
+            request.cookies.clear() ## removing invalid auth cookie
+            raise HTTPException(
+                status_code=401,
+                detail="User not found"
+            )
+        return db_user
+    
+    except JWTError:
+        request.cookies.clear() ## removing invalid auth cookie
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials"
+        )
 
 @router.post("/login")
 def login(user_data: user_schemas.UserLogin, request: Request, response: Response, db: db_dependency):

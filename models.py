@@ -38,4 +38,4 @@ class Task(Base):
     description = Column(String)
     status = Column(String, default="pending")
     project_id = Column(Integer, ForeignKey("projects.id"))
-    project_user = relationship("Project", back_populates="tasks")
+    project = relationship("Project", back_populates="tasks")

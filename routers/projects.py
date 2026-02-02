@@ -11,6 +11,8 @@ import schemas.tasks as tasks_schemas
 import schemas.projects as projects_schemas
 import schemas.users as users_schemas
 
+from models import Project
+
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 ##
@@ -46,9 +48,7 @@ def get_projects(db: db_dependency, request: Request):
         )
 
     ## fetching projects for the user
-    projects: projects_schemas.ProjectBase | None = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "users.id") == int(user_id)).first()
-    if projects is None:
-        return []
+    projects = db.query(Project).join(Project.users).filter(getattr(users_schemas.UserBase, "id") == int(user_id)).all()
     return projects
 
 
@@ -123,6 +123,85 @@ def get_project_users(project_id: int, request:Request, db: db_dependency):
         raise HTTPException(status_code=403, detail="Not authorized to access this project's users")
     
     return db_project.users
+
+@router.get("/{project_id}/tasks", response_model=List[tasks_schemas.TaskBase], tags=["tasks", "projects"])
+def get_project_tasks(project_id: int, request:Request, db: db_dependency):
+    """Get tasks from a specified project"""
+    
+    get_token = request.cookies.get("access_token")
+    if not get_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Not logged in"
+        )
+    
+    try:
+        payload = jwt.decode(get_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        user_id: str = str(payload.get("sub"))
+        if user_id is None:
+            request.cookies.clear() ## User in cookies not found, clear cookies
+            raise HTTPException(
+                status_code=401,
+                detail="Not logged in"
+            )
+    except JWTError:
+        request.cookies.clear() ## Probably an invalid token, clear cookies
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials"
+        )
+    user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
+
+    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if  user not in db_project.users:
+        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
+    
+    return db.query(tasks_schemas.TaskBase).filter(getattr(tasks_schemas.TaskBase, "project_id") == project_id).all()
+
+@router.post("/", response_model=projects_schemas.ProjectCreate)
+def create_project(project: projects_schemas.ProjectCreate, request:Request, db: db_dependency):
+    """Create a new project"""
+    
+    get_token = request.cookies.get("access_token")
+    if not get_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Not logged in"
+        )
+    
+    try:
+        payload = jwt.decode(get_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        user_id: str = str(payload.get("sub"))
+        if user_id is None:
+            request.cookies.clear() ## User in cookies not found, clear cookies
+            raise HTTPException(
+                status_code=401,
+                detail="Not logged in"
+            )
+    except JWTError:
+        request.cookies.clear() ## Probably an invalid token, clear cookies
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials"
+        )
+    user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
+
+    db_project = projects_schemas.ProjectCreate(
+        name=project.name,
+        description=project.description,
+        tasks=[],
+        user_ids=[getattr(user, "id")]
+    )
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    
+    db.commit()
+    db.refresh(db_project)
+    
+    return db_project
 
 # """Get tasks from a specified project"""
 # @router.get("/{project_id}/tasks", response_model=List[tasks_schemas.TaskBase], tags=["tasks"])

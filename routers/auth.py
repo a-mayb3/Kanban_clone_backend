@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from database import db_dependency
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, timezone
@@ -30,8 +30,23 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 @router.post("/login")
-def login(user_data: user_schemas.UserLogin, response: Response, db: db_dependency):
+def login(user_data: user_schemas.UserLogin, request: Request, response: Response, db: db_dependency):
     """Login and receive JWT token in cookie"""
+
+    ## check if access token already exists
+    get_token = request.cookies.get("access_token")
+    if get_token:
+        try:
+            user_id = verify_jwt_token(get_token)
+            return {
+                "message": "Already logged in",
+                "user": {
+                    "id": user_id
+                }
+            }
+        except HTTPException:
+            pass  # Token invalid or expired, proceed to login
+
     db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
     if db_user is None:
         raise HTTPException(
@@ -90,28 +105,6 @@ def verify_jwt_token(token: str):
         return user_id
     except JWTError:
         raise credentials_exception
-
-def get_current_user(request, db: db_dependency):
-    """Get current authenticated user from cookie"""
-    token = request.cookies.get("access_token")
-    
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
-    
-    user_id = verify_jwt_token(token)
-    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    
-    return user
-
 
 def verify_user_password(user_id: int, password: str, db: db_dependency) -> bool:
     """Verify user's password"""

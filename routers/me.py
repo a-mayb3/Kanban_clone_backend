@@ -43,3 +43,59 @@ def get_me(request: Request, db: db_dependency):
             detail="User not found"
         )
     return db_user
+
+
+@router.post("/logout")
+def logout(request: Request,response: Response):
+    """Logout by clearing the JWT cookie"""
+    
+    get_token = request.cookies.get("access_token")
+    if not get_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not logged in"
+        )
+    
+    response.delete_cookie(key="access_token")
+    return {"message": "Logout successful"}
+
+@router.delete("/delete-me")
+def delete_me(request: Request, db: db_dependency):
+    """Delete current authenticated user"""
+    token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not logged in"
+        )
+
+    try:
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        user_id: str = str(payload.get("sub"))
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not logged in"
+            )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials"
+        )
+
+## User retrieval and deletion
+    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+
+    db.delete(user)
+    db.commit()
+
+    ## Logout user by clearing cookie
+    request.cookies.clear()
+
+    return {"message": "User deleted successfully"}

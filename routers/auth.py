@@ -85,11 +85,6 @@ def login(user_data: user_schemas.UserLogin, request: Request, response: Respons
         }
     }
 
-@router.post("/logout")
-def logout(response: Response):
-    """Logout by clearing the JWT cookie"""
-    response.delete_cookie(key="access_token")
-    return {"message": "Logout successful"}
 
 def verify_jwt_token(token: str):
     """Verify and decode a JWT token"""

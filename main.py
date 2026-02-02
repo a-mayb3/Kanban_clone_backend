@@ -105,3 +105,21 @@ async def validation_exception_handler(request, exc):
            } 
         } 
      )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    """Handle all other exceptions"""
+
+    logger = global_logger
+    logger.error(f"Unexpected error: {exc}")
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "message": "An unexpected error occurred.",
+                "type": "internal_server_error",
+                "details": str(exc)
+            }
+        }
+    )

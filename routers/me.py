@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from database import db_dependency
 from jose import JWTError, jwt
-from datetime import datetime, timedelta, timezone
 import models
-import os
 
 from routers import auth
 import schemas.users as user_schemas
-import routers.users as user_router
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -59,7 +56,7 @@ def logout(request: Request,response: Response):
     response.delete_cookie(key="access_token")
     return {"message": "Logout successful"}
 
-@router.delete("/delete-me")
+@router.delete("/delete-me", tags=["me", "auth", "users"])
 def delete_me(request: Request, db: db_dependency):
     """Delete current authenticated user"""
     token = request.cookies.get("access_token")
@@ -74,6 +71,7 @@ def delete_me(request: Request, db: db_dependency):
         payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         user_id: str = str(payload.get("sub"))
         if user_id is None:
+            request.cookies.clear() ## removing invalid auth cookie
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not logged in"
@@ -87,6 +85,7 @@ def delete_me(request: Request, db: db_dependency):
 ## User retrieval and deletion
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
     if user is None:
+        request.cookies.clear() ## removing invalid auth cookie
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"

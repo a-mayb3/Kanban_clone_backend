@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -9,9 +10,19 @@ from routers.auth import router as auth_router
 from routers.me import router as me_router
 from database import init_db
 
+global_logger = logging.getLogger()
+global_logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+global_logger.addHandler(handler)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger = global_logger
+
     # Place for startup and shutdown events if needed in the future
+    logger.info("Initializing database...")
     init_db()
     yield
 
@@ -55,6 +66,10 @@ from fastapi.responses import JSONResponse
 @app.exception_handler(HTTPException) 
 async def http_exception_handler(request, exc): 
     """Custom HTTP exception handler""" 
+    
+    logger = global_logger
+    logger.error(f"HTTP error occurred: {exc.detail}")
+    
     return JSONResponse( 
         status_code=exc.status_code, 
         content={ 
@@ -69,7 +84,11 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(RequestValidationError) 
 async def validation_exception_handler(request, exc): 
-    """Handle validation errors""" 
+    """Handle validation errors"""
+
+    logger = global_logger
+    logger.error(f"Validation error: {exc.errors()}")
+
     return JSONResponse( 
         status_code=422, 
         content={ 

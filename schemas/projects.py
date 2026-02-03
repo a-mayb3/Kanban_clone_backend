@@ -7,11 +7,13 @@ from schemas.users import UserBase
 class ProjectBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
-    id: int
     name: str
     description: str
     tasks: List[TaskBase]
     users: List[UserBase]
+
+class ProjectFull(ProjectBase):
+    id: int
 
 class ProjectCreate(BaseModel):
     name: str

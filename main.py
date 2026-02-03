@@ -82,10 +82,6 @@ def ping():
 def source():
     return {"url": "https://github.com/a-mayb3/Kanban_clone_backend"}
 
-## TODO: Add root endpoint that gives basic info about the API
-## TODO: Add more detailed error handling and logging
-## TODO: Implement authentication and authorization mechanisms
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

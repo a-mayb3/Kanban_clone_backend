@@ -9,12 +9,12 @@ from schemas.users import UserBase
 from schemas.projects_users import ProjectUserBase
 from schemas.projects_tasks import ProjectTaskBase, ProjectTaskCreate
 
-from models import Project
+from models import Project, Task, User
 from routers.auth import get_user_from_jwt
    
 def get_project_by_id_for_user(user: UserBase, project_id: int, db: db_dependency) -> ProjectBase:
     """Get a project by ID and verify user has access"""
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
+    db_project = db.query(Project).filter(Project.id == project_id).first()
     if db_project is None:
         raise HTTPException(status_code=404, detail="Project not found")
     if user not in db_project.users:
@@ -27,7 +27,7 @@ def get_task_by_id_for_project(project: ProjectBase, task_id: int, db: db_depend
     Get a task by ID within a project
     Supposes the user has already been verified to have access to the project
     """
-    db_task = db.query(TaskBase).filter(getattr(TaskBase, "id") == task_id, getattr(TaskBase, "project_id") == getattr(project, "id")).first()
+    db_task = db.query(Task).filter(Task.id == task_id, Task.project_id == getattr(project, "id")).first()
     if db_task is None:
         raise HTTPException(status_code=404, detail="Task not found in the specified project")
     return db_task
@@ -42,7 +42,7 @@ def get_projects(db: db_dependency, request: Request):
     user_id = getattr(user, "id")
 
     ## fetching projects for the user
-    projects = db.query(Project).join(Project.users).filter(getattr(UserBase, "id") == int(user_id)).all()
+    projects = db.query(Project).join(Project.users).filter(User.id == user_id).all()
     return projects
 
 
@@ -51,7 +51,8 @@ def get_project(project_id: int, request:Request, db: db_dependency):
     """Get a project by ID"""
     
     user = get_user_from_jwt(request, db)
-    return get_project_by_id_for_user(user, project_id, db)
+    project = get_project_by_id_for_user(user, project_id, db)
+    return project
 
 @router.get("/{project_id}/users", response_model=List[UserBase], tags=["users", "projects"])
 def get_project_users(project_id: int, request:Request, db: db_dependency):

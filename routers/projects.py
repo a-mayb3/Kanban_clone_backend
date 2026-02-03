@@ -52,6 +52,39 @@ def get_project_users(project_id: int, request:Request, db: db_dependency):
     
     return db_project.users
 
+
+@router.get("/{project_id}/tasks/{task_id}", response_model=tasks_schemas.TaskBase, tags=["tasks"])
+def get_project_task(project_id: int, task_id: int, db: db_dependency, request: Request):
+    """Get a specific task from a specified project"""
+    user = get_user_from_jwt(request, db)
+
+    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if  user not in db_project.users:
+        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
+
+    db_task = db.query(tasks_schemas.TaskBase).filter(getattr(tasks_schemas.TaskBase, "project_id") == project_id, getattr(tasks_schemas.TaskBase, "id") == task_id).first()
+    if db_task is None:
+        raise HTTPException(status_code=404, detail="Task not found in the specified project")
+    return db_task
+
+@router.get("/{project_id}/users/{user_id}", response_model=users_schemas.UserBase, tags=["users"])
+def get_project_user(project_id: int, user_id: int, db: db_dependency, request: Request):
+    """Get a specific user from a specified project"""
+    user = get_user_from_jwt(request, db)
+
+    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if  user not in db_project.users:
+        raise HTTPException(status_code=403, detail="Not authorized to access this project's users")
+
+    db_user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
+    if db_user is None or db_user not in db_project.users:
+        raise HTTPException(status_code=404, detail="User not found in the specified project")
+    return db_user
+
 @router.get("/{project_id}/tasks", response_model=List[tasks_schemas.TaskBase], tags=["tasks", "projects"])
 def get_project_tasks(project_id: int, request:Request, db: db_dependency):
     """Get tasks from a specified project"""
@@ -86,40 +119,9 @@ def create_project(project: projects_schemas.ProjectCreate, request:Request, db:
     
     return db_project
 
-@router.get("/{project_id}/tasks/{task_id}", response_model=tasks_schemas.TaskBase, tags=["tasks"])
-def read_task_from_project(project_id: int, task_id: int, db: db_dependency, request: Request):
-    """Get a specific task from a specified project"""
-    user = get_user_from_jwt(request, db)
-
-    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
-
-    db_task = db.query(tasks_schemas.TaskBase).filter(getattr(tasks_schemas.TaskBase, "project_id") == project_id, getattr(tasks_schemas.TaskBase, "id") == task_id).first()
-    if db_task is None:
-        raise HTTPException(status_code=404, detail="Task not found in the specified project")
-    return db_task
-
-@router.get("/{project_id}/users/{user_id}", response_model=users_schemas.UserBase, tags=["users"])
-def read_user_from_project(project_id: int, user_id: int, db: db_dependency, request: Request):
-    """Get a specific user from a specified project"""
-    user = get_user_from_jwt(request, db)
-
-    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's users")
-
-    db_user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
-    if db_user is None or db_user not in db_project.users:
-        raise HTTPException(status_code=404, detail="User not found in the specified project")
-    return db_user
 
 @router.post("/{project_id}/tasks", response_model=projects_tasks_schemas.ProjectTaskCreate, tags=["tasks"])
-def create_task_in_project(project_id: int, task: tasks_schemas.TaskCreate, db: db_dependency, request: Request):
+def create_project_task(project_id: int, task: tasks_schemas.TaskCreate, db: db_dependency, request: Request):
     """Create a new task in a specified project"""
     user = get_user_from_jwt(request, db)
 
@@ -142,7 +144,7 @@ def create_task_in_project(project_id: int, task: tasks_schemas.TaskCreate, db: 
     return db_task
 
 @router.post("/{project_id}/users", response_model=projects_schemas.ProjectAddUsers, tags=["users"])
-def add_users_to_project(project_id: int, user_data: projects_schemas.ProjectAddUsers, db: db_dependency, request: Request):
+def add_project_user(project_id: int, user_data: projects_schemas.ProjectAddUsers, db: db_dependency, request: Request):
     """Add users to a specified project using their IDs"""
     user = get_user_from_jwt(request, db)
 
@@ -181,7 +183,7 @@ def remove_user_from_project(project_id: int, user_id: int, db: db_dependency, r
     return db_project
 
 @router.put("/{project_id}/tasks/{task_id}", response_model=tasks_schemas.TaskUpdate, tags=["tasks"])
-def update_task_in_project(project_id: int, task_id: int, task: tasks_schemas.TaskUpdate, db: db_dependency, request: Request):
+def update_project_task(project_id: int, task_id: int, task: tasks_schemas.TaskUpdate, db: db_dependency, request: Request):
     """Update a task in a specified project"""
     user = get_user_from_jwt(request, db)
 
@@ -238,7 +240,7 @@ def delete_project(project_id: int, db: db_dependency, request: Request):
     return {"detail": "Project deleted successfully"}
 
 @router.delete("/{project_id}/tasks/{task_id}" , tags=["tasks"])
-def delete_task_from_project(project_id: int, task_id: int, db: db_dependency, request: Request):
+def delete_project_task(project_id: int, task_id: int, db: db_dependency, request: Request):
     """Delete a task from a specified project"""
     user = get_user_from_jwt(request, db)
 

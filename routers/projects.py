@@ -12,6 +12,7 @@ import schemas.projects as projects_schemas
 import schemas.users as users_schemas
 
 from models import Project
+from routers.auth import get_user_from_jwt
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -23,29 +24,8 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 def get_projects(db: db_dependency, request: Request):
     """Get a user's projects"""
 
-    ## User retrieval from JWT token in cookies
-    get_token = request.cookies.get("access_token")
-    if not get_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Not logged in"
-        )
-    
-    try:
-        payload = jwt.decode(get_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        user_id: str = str(payload.get("sub"))
-        if user_id is None:
-            request.cookies.clear() ## User in cookies not found, clear cookies
-            raise HTTPException(
-                status_code=401,
-                detail="Not logged in"
-            )
-    except JWTError:
-        request.cookies.clear() ## Probably an invalid token, clear cookies
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials"
-        )
+    user = get_user_from_jwt(request, db)
+    user_id = getattr(user, "id")
 
     ## fetching projects for the user
     projects = db.query(Project).join(Project.users).filter(getattr(users_schemas.UserBase, "id") == int(user_id)).all()
@@ -56,29 +36,7 @@ def get_projects(db: db_dependency, request: Request):
 def get_project(project_id: int, request:Request, db: db_dependency):
     """Get a project by ID"""
     
-    get_token = request.cookies.get("access_token")
-    if not get_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Not logged in"
-        )
-    
-    try:
-        payload = jwt.decode(get_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        user_id: str = str(payload.get("sub"))
-        if user_id is None:
-            request.cookies.clear() ## User in cookies not found, clear cookies
-            raise HTTPException(
-                status_code=401,
-                detail="Not logged in"
-            )
-    except JWTError:
-        request.cookies.clear() ## Probably an invalid token, clear cookies
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials"
-        )
-    user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
+    user = get_user_from_jwt(request, db)
 
     db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
     if db_project is None:
@@ -92,30 +50,7 @@ def get_project(project_id: int, request:Request, db: db_dependency):
 def get_project_users(project_id: int, request:Request, db: db_dependency):
     """Get users from a specified project"""
     
-    get_token = request.cookies.get("access_token")
-    if not get_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Not logged in"
-        )
-    
-    try:
-        payload = jwt.decode(get_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        user_id: str = str(payload.get("sub"))
-        if user_id is None:
-            request.cookies.clear() ## User in cookies not found, clear cookies
-            raise HTTPException(
-                status_code=401,
-                detail="Not logged in"
-            )
-    except JWTError:
-        request.cookies.clear() ## Probably an invalid token, clear cookies
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials"
-        )
-    user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
-
+    user = get_user_from_jwt(request, db)
     db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
     if db_project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -128,29 +63,7 @@ def get_project_users(project_id: int, request:Request, db: db_dependency):
 def get_project_tasks(project_id: int, request:Request, db: db_dependency):
     """Get tasks from a specified project"""
     
-    get_token = request.cookies.get("access_token")
-    if not get_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Not logged in"
-        )
-    
-    try:
-        payload = jwt.decode(get_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        user_id: str = str(payload.get("sub"))
-        if user_id is None:
-            request.cookies.clear() ## User in cookies not found, clear cookies
-            raise HTTPException(
-                status_code=401,
-                detail="Not logged in"
-            )
-    except JWTError:
-        request.cookies.clear() ## Probably an invalid token, clear cookies
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials"
-        )
-    user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
+    user = get_user_from_jwt(request, db)
 
     db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
     if db_project is None:
@@ -164,30 +77,7 @@ def get_project_tasks(project_id: int, request:Request, db: db_dependency):
 def create_project(project: projects_schemas.ProjectCreate, request:Request, db: db_dependency):
     """Create a new project"""
     
-    get_token = request.cookies.get("access_token")
-    if not get_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Not logged in"
-        )
-    
-    try:
-        payload = jwt.decode(get_token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        user_id: str = str(payload.get("sub"))
-        if user_id is None:
-            request.cookies.clear() ## User in cookies not found, clear cookies
-            raise HTTPException(
-                status_code=401,
-                detail="Not logged in"
-            )
-    except JWTError:
-        request.cookies.clear() ## Probably an invalid token, clear cookies
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials"
-        )
-    user = db.query(users_schemas.UserBase).filter(getattr(users_schemas.UserBase, "id") == user_id).first()
-
+    user = get_user_from_jwt(request, db)
     db_project = projects_schemas.ProjectCreate(
         name=project.name,
         description=project.description,

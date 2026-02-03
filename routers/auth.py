@@ -16,7 +16,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: timedelta | None = None): 
+    """Create a JWT token"""
+    
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -27,7 +29,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def check_for_valid_token(request: Request, db: db_dependency) -> models.User :
+def get_user_from_jwt(request: Request, db: db_dependency) -> models.User :
     """Helper function to check for valid JWT token in cookies"""
     token = request.cookies.get("access_token")
     if not token:

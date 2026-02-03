@@ -9,7 +9,7 @@ import models
 from routers import auth
 import schemas.users as users
 import schemas.projects as projects
-from routers.auth import check_for_valid_token
+from routers.auth import get_user_from_jwt
 
 from pyargon2 import hash
 
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 def read_user(user_id: int, db: db_dependency, request:Request):
     """Get a user by ID"""
 
-    check_for_valid_token(request, db)
+    get_user_from_jwt(request, db)
     
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if db_user is None:
@@ -31,7 +31,7 @@ def read_user(user_id: int, db: db_dependency, request:Request):
 def read_projects_from_user(user_id: int, db: db_dependency, request: Request):
     """Get projects assigned to a user"""
 
-    check_for_valid_token(request, db)
+    get_user_from_jwt(request, db)
 
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if db_user is None:

@@ -204,78 +204,53 @@ def update_task_in_project(project_id: int, task_id: int, task: tasks_schemas.Ta
     db.refresh(db_task)
     return db_task
 
-# """Update a project by ID"""
+@router.put("/{project_id}", response_model=projects_schemas.ProjectUpdate)
+def update_project(project_id: int, project: projects_schemas.ProjectUpdate, db: db_dependency, request: Request):
+    """Update a project by ID"""
+    user = get_user_from_jwt(request, db)
 
-# @router.put("/{project_id}", response_model=projects.ProjectUpdate)
-# def update_project(project_id: int, project: projects.ProjectUpdate, db: db_dependency):
-#     db_project = db.query(projects.models.Project).filter(projects.models.Project.id == project_id).first()
-#     if db_project is None:
-#         raise HTTPException(status_code=404, detail="Project not found")
-#     if project.name is not None:
-#         db_project.name = project.name
-#     if project.description is not None:
-#         db_project.description = project.description
-#     db.commit()
-#     db.refresh(db_project)
-#     return db_project
+    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if  user not in db_project.users:
+        raise HTTPException(status_code=403, detail="Not authorized to modify this project")
+    if project.name is not None:
+        db_project.name = project.name
+    if project.description is not None:
+        db_project.description = project.description
+    db.commit()
+    db.refresh(db_project)
+    return db_project
 
+@router.delete("/{project_id}", tags=["projects"])
+def delete_project(project_id: int, db: db_dependency, request: Request):
+    """Delete a project by ID"""
+    user = get_user_from_jwt(request, db)
 
-# """Update a task in a specified project"""
+    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if  user not in db_project.users:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this project")
+    
+    db.delete(db_project)
+    db.commit()
+    return {"detail": "Project deleted successfully"}
 
-# @router.put("/{project_id}/tasks/{task_id}", response_model=tasks.TaskUpdate, tags=["tasks"])
-# def update_task_in_project(project_id: int, task_id: int, task: tasks.TaskUpdate, db: db_dependency):
-#     db_task = db.query(tasks.models.Task).filter(tasks.models.Task.project_id == project_id, tasks.models.Task.id == task_id).first()
-#     if db_task is None:
-#         raise HTTPException(status_code=404, detail="Task not found in the specified project")
-#     if task.title is not None:
-#         db_task.title = task.title
-#     if task.description is not None:
-#         db_task.description = task.description
-#     if task.status is not None:
-#         db_task.status = task.status
-#     db.commit()
-#     db.refresh(db_task)
-#     return db_task
+@router.delete("/{project_id}/tasks/{task_id}" , tags=["tasks"])
+def delete_task_from_project(project_id: int, task_id: int, db: db_dependency, request: Request):
+    """Delete a task from a specified project"""
+    user = get_user_from_jwt(request, db)
 
-# ##
-# ## DELETE endpoints
-# ##
+    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if  user not in db_project.users:
+        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
 
-# """Delete a project by ID"""
-
-# @router.delete("/{project_id}")
-# def delete_project(project_id: int, db: db_dependency):
-#     db_project = db.query(projects.models.Project).filter(projects.models.Project.id == project_id).first()
-#     if db_project is None:
-#         raise HTTPException(status_code=404, detail="Project not found")
-#     db.delete(db_project)
-#     db.commit()
-#     return {"detail": "Project deleted successfully"}
-
-
-# """Delete a task from a specified project"""
-
-# @router.delete("/{project_id}/tasks/{task_id}" , tags=["tasks"])
-# def delete_task_from_project(project_id: int, task_id: int, db: db_dependency):
-#     db_task = db.query(tasks.models.Task).filter(tasks.models.Task.project_id == project_id, tasks.models.Task.id == task_id).first()
-#     if db_task is None:
-#         raise HTTPException(status_code=404, detail="Task not found in the specified project")
-#     db.delete(db_task)
-#     db.commit()
-#     return {"detail": "Task deleted successfully"}
-
-
-# """Remove users from a specified project using their IDs"""
-
-# @router.delete("/{project_id}/users/{user_id}", tags=["users"])
-# def remove_user_from_project(project_id: int, user_id: int, db: db_dependency):
-#     db_project = db.query(projects.models.Project).filter(projects.models.Project.id == project_id).first()
-#     if db_project is None:
-#         raise HTTPException(status_code=404, detail="Project not found")
-#     db_user = db.query(users.models.User).filter(users.models.User.id == user_id).first()
-#     if db_user is None or db_user not in db_project.users:
-#         raise HTTPException(status_code=404, detail="User not found in the specified project")
-#     db_project.users.remove(db_user)
-#     db.commit()
-#     db.refresh(db_project)
-#     return {"detail": "User removed from project successfully"}
+    db_task = db.query(tasks_schemas.TaskBase).filter(getattr(tasks_schemas.TaskBase, "project_id") == project_id, getattr(tasks_schemas.TaskBase, "id") == task_id).first()
+    if db_task is None:
+        raise HTTPException(status_code=404, detail="Task not found in the specified project")
+    db.delete(db_task)
+    db.commit()
+    return {"detail": "Task deleted successfully"}

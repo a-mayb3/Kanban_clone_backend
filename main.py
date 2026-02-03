@@ -32,7 +32,10 @@ async def lifespan(app: FastAPI):
     init_db()
     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    license_info={"name": "AGPL-3.0-or-later", "url": "https://www.gnu.org/licenses/agpl-3.0.en.html"}
+    )
 
 app.add_middleware(
     CORSMiddleware,

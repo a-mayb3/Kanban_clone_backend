@@ -10,15 +10,12 @@ from database import db_dependency
 import schemas.tasks as tasks_schemas
 import schemas.projects as projects_schemas
 import schemas.users as users_schemas
+import schemas.projects_tasks as projects_tasks_schemas
 
 from models import Project
 from routers.auth import get_user_from_jwt
 
 router = APIRouter(prefix="/projects", tags=["projects"])
-
-##
-## GET endpoints
-##
 
 @router.get("/", response_model=List[projects_schemas.ProjectBase], tags=["projects", "me"])
 def get_projects(db: db_dependency, request: Request):

@@ -8,7 +8,7 @@ import schemas.users as user_schemas
 
 router = APIRouter(prefix="/me", tags=["me"])
 
-@router.get("/", response_model=user_schemas.UserBase)
+@router.get("/", response_model=user_schemas.UserBase, tags=["me", "users"])
 def get_me(request: Request, db: db_dependency):
     """Get current authenticated user"""
     token = request.cookies.get("access_token")

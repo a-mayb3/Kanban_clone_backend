@@ -12,38 +12,8 @@ router = APIRouter(prefix="/me", tags=["me"])
 @router.get("/", response_model=projects_users_schemas.ProjectUserBase, tags=["me", "users"])
 def get_me(request: Request, db: db_dependency):
     """Get current authenticated user"""
-    token = request.cookies.get("access_token")
-
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not logged in"
-        )
-    
-    try:
-        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        user_id: str = str(payload.get("sub"))
-        if user_id is None:
-            request.cookies.clear() ## removing invalid auth cookie
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Not logged in"
-            )
-    except JWTError:
-        request.cookies.clear() ## removing invalid auth cookie
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials"
-        )
-    
-    db_user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-    if db_user is None:
-        request.cookies.clear() ## removing invalid auth cookie
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    return db_user
+    user = auth.get_user_from_jwt(request, db)
+    return user
 
 
 @router.get("/logout", tags=["me", "auth"])
@@ -65,10 +35,8 @@ def delete_me(request: Request, db: db_dependency):
     """Delete current authenticated user"""
     
     user = auth.get_user_from_jwt(request, db)
-
     db.delete(user)
     db.commit()
-
     ## Logout user by clearing cookie
     request.cookies.clear()
     return {"message": "User deleted successfully"}

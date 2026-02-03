@@ -10,6 +10,26 @@ from routers.auth import router as auth_router
 from routers.me import router as me_router
 from database import init_db
 
+app_description = """
+This API serves as the backend for a Kanban-style project management application.
+It allows users to manage projects, tasks, and user assignments with proper authentication and authorization.
+
+## Stack
+- FastAPI
+- SQLAlchemy
+- SQLite
+
+## Features
+- User Authentication (JWT and Argon2 Password Hashing)
+- Project Management (Create, Read, Update, Delete)
+- Task Management within Projects
+- User Assignments to Projects
+- CORS Configuration for Frontend Integration
+
+## Source Code
+The source code for this API can be found on [GitHub](https://github.com/a-mayb3/Kanban_clone_backend) or [my forgejo instance](https://git.vollex.cc/a-mayb3/Kanban_clone_backend).
+"""
+
 global_logger = logging.getLogger()
 global_logger.setLevel(logging.INFO)
 logging.basicConfig(
@@ -34,7 +54,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    license_info={"name": "AGPL-3.0-or-later", "url": "https://www.gnu.org/licenses/agpl-3.0.en.html"}
+    license_info={"name": "AGPL-3.0-or-later", "url": "https://www.gnu.org/licenses/agpl-3.0.en.html"},
+    description=app_description,
+    title="Kanban Clone Backend API",
     )
 
 app.add_middleware(

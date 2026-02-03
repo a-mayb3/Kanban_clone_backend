@@ -35,6 +35,18 @@ def delete_me(request: Request, db: db_dependency):
     """Delete current authenticated user"""
     
     user = auth.get_user_from_jwt(request, db)
+
+    ## Remove user from all projects, delete projects with no users left
+    projects = user.projects[:]
+    for project in projects:
+        project.users.remove(user)
+        if len(project.users) == 0:
+            ## delete project if no users left
+            tasks = project.tasks[:]
+            for task in tasks:
+                db.delete(task)
+            db.delete(project)
+
     db.delete(user)
     db.commit()
     ## Logout user by clearing cookie

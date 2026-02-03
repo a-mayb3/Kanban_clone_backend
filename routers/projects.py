@@ -11,6 +11,26 @@ from schemas.projects_tasks import ProjectTaskBase, ProjectTaskCreate
 
 from models import Project
 from routers.auth import get_user_from_jwt
+   
+def get_project_by_id_for_user(user: UserBase, project_id: int, db: db_dependency) -> ProjectBase:
+    """Get a project by ID and verify user has access"""
+    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if user not in db_project.users:
+        raise HTTPException(status_code=403, detail="Not authorized to access this project")
+    
+    return db_project
+
+def get_task_by_id_for_project(project: ProjectBase, task_id: int, db: db_dependency) -> TaskBase:
+    """
+    Get a task by ID within a project
+    Supposes the user has already been verified to have access to the project
+    """
+    db_task = db.query(TaskBase).filter(getattr(TaskBase, "id") == task_id, getattr(TaskBase, "project_id") == getattr(project, "id")).first()
+    if db_task is None:
+        raise HTTPException(status_code=404, detail="Task not found in the specified project")
+    return db_task
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -31,43 +51,25 @@ def get_project(project_id: int, request:Request, db: db_dependency):
     """Get a project by ID"""
     
     user = get_user_from_jwt(request, db)
-
-    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project")
-    
-    return db_project
+    return get_project_by_id_for_user(user, project_id, db)
 
 @router.get("/{project_id}/users", response_model=List[UserBase], tags=["users", "projects"])
 def get_project_users(project_id: int, request:Request, db: db_dependency):
     """Get users from a specified project"""
     
     user = get_user_from_jwt(request, db)
-    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's users")
-    
+    db_project = get_project_by_id_for_user(user, project_id, db)
     return db_project.users
 
 
 @router.get("/{project_id}/tasks/{task_id}", response_model=TaskBase, tags=["tasks"])
 def get_project_task(project_id: int, task_id: int, db: db_dependency, request: Request):
     """Get a specific task from a specified project"""
+    
     user = get_user_from_jwt(request, db)
+    db_project = get_project_by_id_for_user(user, project_id, db)
+    db_task = get_task_by_id_for_project(db_project, task_id, db)
 
-    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
-
-    db_task = db.query(TaskBase).filter(getattr(TaskBase, "project_id") == project_id, getattr(TaskBase, "id") == task_id).first()
-    if db_task is None:
-        raise HTTPException(status_code=404, detail="Task not found in the specified project")
     return db_task
 
 @router.get("/{project_id}/users/{user_id}", response_model=UserBase, tags=["users"])
@@ -75,11 +77,7 @@ def get_project_user(project_id: int, user_id: int, db: db_dependency, request: 
     """Get a specific user from a specified project"""
     user = get_user_from_jwt(request, db)
 
-    db_project = db.query(projects_schemas.ProjectBase).filter(getattr(projects_schemas.ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's users")
+    db_project : ProjectBase = get_project_by_id_for_user(user, project_id, db)
 
     db_user = db.query(UserBase).filter(getattr(UserBase, "id") == user_id).first()
     if db_user is None or db_user not in db_project.users:
@@ -91,20 +89,16 @@ def get_project_tasks(project_id: int, request:Request, db: db_dependency):
     """Get tasks from a specified project"""
     
     user = get_user_from_jwt(request, db)
-
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
-    
-    return db.query(TaskBase).filter(getattr(TaskBase, "project_id") == project_id).all()
+    db_project = get_project_by_id_for_user(user, project_id, db)
+    db_tasks = db.query(TaskBase).filter(getattr(TaskBase, "project_id") == project_id).all()
+    return db_tasks
 
 @router.post("/", response_model=ProjectCreate)
 def create_project(project: ProjectCreate, request:Request, db: db_dependency):
     """Create a new project"""
     
     user = get_user_from_jwt(request, db)
+
     db_project = ProjectCreate(
         name=project.name,
         description=project.description,
@@ -126,11 +120,7 @@ def create_project_task(project_id: int, task: TaskCreate, db: db_dependency, re
     """Create a new task in a specified project"""
     user = get_user_from_jwt(request, db)
 
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to add tasks to this project")
+    db_project = get_project_by_id_for_user(user, project_id, db)
 
     db_task = ProjectTaskCreate(
         title=task.title,
@@ -149,11 +139,7 @@ def add_project_user(project_id: int, user_data: ProjectAddUsers, db: db_depende
     """Add users to a specified project using their IDs"""
     user = get_user_from_jwt(request, db)
 
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to modify this project's users")
+    db_project = get_project_by_id_for_user(user, project_id, db)
 
     for user_id in user_data.user_ids:
         db_user = db.query(UserBase).filter(getattr(UserBase, "id") == user_id).first()
@@ -168,11 +154,7 @@ def remove_user_from_project(project_id: int, user_id: int, db: db_dependency, r
     """Remove a user from a specified project using their ID"""
     user = get_user_from_jwt(request, db)
 
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to modify this project's users")
+    db_project = get_project_by_id_for_user(user, project_id, db)
 
     db_user = db.query(UserBase).filter(getattr(UserBase, "id") == user_id).first()
     if db_user is None or db_user not in db_project.users:
@@ -187,22 +169,16 @@ def remove_user_from_project(project_id: int, user_id: int, db: db_dependency, r
 def update_project_task(project_id: int, task_id: int, task: TaskUpdate, db: db_dependency, request: Request):
     """Update a task in a specified project"""
     user = get_user_from_jwt(request, db)
+    db_project = get_project_by_id_for_user(user, project_id, db)
+    db_task = get_task_by_id_for_project(db_project, task_id, db)
 
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
-
-    db_task = db.query(TaskBase).filter(getattr(TaskBase, "project_id") == project_id, getattr(TaskBase, "id") == task_id).first()
-    if db_task is None:
-        raise HTTPException(status_code=404, detail="Task not found in the specified project")
     if task.title is not None:
         db_task.title = task.title
     if task.description is not None:
         db_task.description = task.description
     if task.status is not None:
         db_task.status = task.status
+
     db.commit()
     db.refresh(db_task)
     return db_task
@@ -212,15 +188,13 @@ def update_project(project_id: int, project: ProjectUpdate, db: db_dependency, r
     """Update a project by ID"""
     user = get_user_from_jwt(request, db)
 
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to modify this project")
+    db_project = get_project_by_id_for_user(user, project_id, db)
+
     if project.name is not None:
         db_project.name = project.name
     if project.description is not None:
         db_project.description = project.description
+
     db.commit()
     db.refresh(db_project)
     return db_project
@@ -229,12 +203,7 @@ def update_project(project_id: int, project: ProjectUpdate, db: db_dependency, r
 def delete_project(project_id: int, db: db_dependency, request: Request):
     """Delete a project by ID"""
     user = get_user_from_jwt(request, db)
-
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this project")
+    db_project = get_project_by_id_for_user(user, project_id, db)
     
     db.delete(db_project)
     db.commit()
@@ -244,16 +213,9 @@ def delete_project(project_id: int, db: db_dependency, request: Request):
 def delete_project_task(project_id: int, task_id: int, db: db_dependency, request: Request):
     """Delete a task from a specified project"""
     user = get_user_from_jwt(request, db)
-
-    db_project = db.query(ProjectBase).filter(getattr(ProjectBase, "id") == project_id).first()
-    if db_project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if  user not in db_project.users:
-        raise HTTPException(status_code=403, detail="Not authorized to access this project's tasks")
-
-    db_task = db.query(TaskBase).filter(getattr(TaskBase, "project_id") == project_id, getattr(TaskBase, "id") == task_id).first()
-    if db_task is None:
-        raise HTTPException(status_code=404, detail="Task not found in the specified project")
+    db_project = get_project_by_id_for_user(user, project_id, db)
+    db_task = get_task_by_id_for_project(db_project, task_id, db)
+    
     db.delete(db_task)
     db.commit()
     return {"detail": "Task deleted successfully"}

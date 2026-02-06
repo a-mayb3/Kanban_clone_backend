@@ -16,10 +16,11 @@ class ProjectFull(ProjectBase):
     id: int
 
 class ProjectCreate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     name: str
     description: Optional[str] = None
     tasks: List[TaskBase] = []
-    user_ids: List[int] = []
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None

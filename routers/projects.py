@@ -100,16 +100,15 @@ def create_project(project: ProjectCreate, request:Request, db: db_dependency):
     
     user = get_user_from_jwt(request, db)
 
-    db_project = ProjectCreate(
+    db_project = Project(
         name=project.name,
         description=project.description,
-        tasks=[],
-        user_ids=[getattr(user, "id")]
+        tasks=[]
     )
+
+    db_project.users.append(user)
+
     db.add(db_project)
-    db.commit()
-    db.refresh(db_project)
-    
     db.commit()
     db.refresh(db_project)
     
@@ -207,15 +206,10 @@ def delete_project(project_id: int, db: db_dependency, request: Request):
     db_project = get_project_by_id_for_user(user, project_id, db)
     
     ## Remove dangling tasks and user associations
-    tasks: List[TaskBase] = db.query(TaskBase).filter(getattr(TaskBase, "project_id") == project_id).all()
+    tasks: List[Task] = db.query(Task).filter(Task.project_id == project_id).all()
     for task in tasks:
         db.delete(task)
         db_project.tasks.remove(task)
-
-    users: List[ProjectUserBase] = db.query(ProjectUserBase).join(ProjectUserBase).filter(getattr(ProjectBase, "id") == project_id).all()
-    for proj_user in users:
-        db_project.users.remove(proj_user)
-        proj_user.projects.remove(db_project)
 
     db.delete(db_project)
     db.commit()

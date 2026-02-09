@@ -4,7 +4,7 @@ from typing import List, Annotated
 from database import db_dependency
 
 from schemas.tasks import TaskBase, TaskCreate, TaskUpdate
-from schemas.projects import ProjectBase, ProjectCreate, ProjectUpdate, ProjectAddUsers, ProjectRemoveUsers
+from schemas.projects import ProjectBase, ProjectCreate, ProjectUpdate, ProjectAddUsers, ProjectRemoveUsers, ProjectFull
 from schemas.users import UserBase
 from schemas.projects_users import ProjectUserBase
 from schemas.projects_tasks import ProjectTaskBase, ProjectTaskCreate
@@ -34,7 +34,7 @@ def get_task_by_id_for_project(project: ProjectBase, task_id: int, db: db_depend
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
-@router.get("/", response_model=List[ProjectBase], tags=["projects", "me"])
+@router.get("/", response_model=List[ProjectFull], tags=["projects", "me"])
 def get_projects(db: db_dependency, request: Request):
     """Get a user's projects"""
 
@@ -46,7 +46,7 @@ def get_projects(db: db_dependency, request: Request):
     return projects
 
 
-@router.get("/{project_id}", response_model=ProjectBase)
+@router.get("/{project_id}", response_model=ProjectFull)
 def get_project(project_id: int, request:Request, db: db_dependency):
     """Get a project by ID"""
     

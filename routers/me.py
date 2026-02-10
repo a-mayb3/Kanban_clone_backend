@@ -4,12 +4,15 @@ from jose import JWTError, jwt
 import models
 
 from routers import auth
-import schemas.users as user_schemas
-import schemas.projects_users as projects_users_schemas
+
+from schemas.users import UserBase
+from schemas.projects import ProjectBase
+from schemas.projects_users import ProjectUserBase
+
 
 router = APIRouter(prefix="/me", tags=["me"])
 
-@router.get("/", response_model=projects_users_schemas.ProjectUserBase, tags=["me", "users"])
+@router.get("/", response_model=ProjectUserBase, tags=["me", "users"])
 def get_me(request: Request, db: db_dependency):
     """Get current authenticated user"""
     user = auth.get_user_from_jwt(request, db)

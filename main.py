@@ -28,6 +28,13 @@ It allows users to manage projects, tasks, and user assignments with proper auth
 
 ## Source Code
 The source code for this API can be found on [GitHub](https://github.com/a-mayb3/Kanban_clone_backend) or [my forgejo instance](https://git.vollex.cc/a-mayb3/Kanban_clone_backend).
+
+## Other projects
+Here are some frontend implementations for this API:
+- [KanbanCloneAngular](https://github.com/a-mayb3/KanbanCloneAngular) - Angular frontend
+- [KanbanCloneAndroid](https://github.com/a-mayb3/KanbanCloneAndroid) - Android frontend
+
+
 """
 
 global_logger = logging.getLogger()

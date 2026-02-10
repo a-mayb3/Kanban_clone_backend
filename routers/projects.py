@@ -80,7 +80,7 @@ def get_project_user(project_id: int, user_id: int, db: db_dependency, request: 
 
     db_project : ProjectBase = get_project_by_id_for_user(user, project_id, db)
 
-    db_user = db.query(UserBase).filter(getattr(UserBase, "id") == user_id).first()
+    db_user = db.query(User).filter(User.id == user_id).first()
     if db_user is None or db_user not in db_project.users:
         raise HTTPException(status_code=404, detail="User not found in the specified project")
     return db_user
@@ -91,7 +91,7 @@ def get_project_tasks(project_id: int, request:Request, db: db_dependency):
     
     user = get_user_from_jwt(request, db)
     db_project = get_project_by_id_for_user(user, project_id, db)
-    db_tasks = db.query(TaskBase).filter(getattr(TaskBase, "project_id") == project_id).all()
+    db_tasks = db.query(Task).filter(Task.project_id == project_id).all()
     return db_tasks
 
 @router.post("/", response_model=ProjectCreate)
@@ -134,16 +134,21 @@ def create_project_task(project_id: int, task: TaskCreate, db: db_dependency, re
     db.refresh(db_task)
     return db_task
 
-@router.post("/{project_id}/users", response_model=ProjectAddUser, tags=["users"])
+@router.post("/{project_id}/users", response_model=ProjectFull, tags=["users"])
 def add_project_user(project_id: int, user_data: ProjectAddUser, db: db_dependency, request: Request):
     """Add a user to a specified project using their email address"""
     user = get_user_from_jwt(request, db)
-
     db_project = get_project_by_id_for_user(user, project_id, db)
 
-    db_user = db.query(UserBase).filter(getattr(UserBase, "email") == user_data.user_email).first()
-    if db_user:
+    db_user = db.query(User).filter(User.email == user_data.user_email).first()
+
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User with the specified email not found")
+
+    if db_user not in db_project.users:
         db_project.users.append(db_user)
+    else:
+        raise HTTPException(status_code=400, detail="User is already a member of the project")
         
     db.commit()
     db.refresh(db_project)
@@ -156,7 +161,7 @@ def remove_user_from_project(project_id: int, user_id: int, db: db_dependency, r
 
     db_project = get_project_by_id_for_user(user, project_id, db)
 
-    db_user = db.query(UserBase).filter(getattr(UserBase, "id") == user_id).first()
+    db_user = db.query(User).filter(User.id == user_id).first()
     if db_user is None or db_user not in db_project.users:
         raise HTTPException(status_code=404, detail="User not found in the specified project")
 

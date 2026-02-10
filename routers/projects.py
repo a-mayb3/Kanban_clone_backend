@@ -4,7 +4,7 @@ from typing import List, Annotated
 from database import db_dependency
 
 from schemas.tasks import TaskBase, TaskCreate, TaskUpdate
-from schemas.projects import ProjectBase, ProjectCreate, ProjectUpdate, ProjectAddUsers, ProjectRemoveUsers, ProjectFull
+from schemas.projects import ProjectBase, ProjectCreate, ProjectUpdate, ProjectAddUser, ProjectRemoveUsers, ProjectFull
 from schemas.users import UserBase
 from schemas.projects_users import ProjectUserBase
 from schemas.projects_tasks import ProjectTaskBase, ProjectTaskCreate
@@ -134,17 +134,17 @@ def create_project_task(project_id: int, task: TaskCreate, db: db_dependency, re
     db.refresh(db_task)
     return db_task
 
-@router.post("/{project_id}/users", response_model=ProjectAddUsers, tags=["users"])
-def add_project_user(project_id: int, user_data: ProjectAddUsers, db: db_dependency, request: Request):
-    """Add users to a specified project using their IDs"""
+@router.post("/{project_id}/users", response_model=ProjectAddUser, tags=["users"])
+def add_project_user(project_id: int, user_data: ProjectAddUser, db: db_dependency, request: Request):
+    """Add a user to a specified project using their email address"""
     user = get_user_from_jwt(request, db)
 
     db_project = get_project_by_id_for_user(user, project_id, db)
 
-    for user_id in user_data.user_ids:
-        db_user = db.query(UserBase).filter(getattr(UserBase, "id") == user_id).first()
-        if db_user:
-            db_project.users.append(db_user)
+    db_user = db.query(UserBase).filter(getattr(UserBase, "email") == user_data.user_email).first()
+    if db_user:
+        db_project.users.append(db_user)
+        
     db.commit()
     db.refresh(db_project)
     return db_project

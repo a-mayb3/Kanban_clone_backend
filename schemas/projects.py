@@ -26,6 +26,9 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
 
+class ProjectAddUser(BaseModel):
+    user_email: str
+
 class ProjectAddUsers(BaseModel):
     user_ids: List[int] = []
 

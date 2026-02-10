@@ -115,14 +115,14 @@ def create_project(project: ProjectCreate, request:Request, db: db_dependency):
     return db_project
 
 
-@router.post("/{project_id}/tasks", response_model=ProjectTaskCreate, tags=["tasks"])
+@router.post("/{project_id}/tasks", response_model=ProjectTaskBase, tags=["tasks"])
 def create_project_task(project_id: int, task: TaskCreate, db: db_dependency, request: Request):
     """Create a new task in a specified project"""
     user = get_user_from_jwt(request, db)
 
     db_project = get_project_by_id_for_user(user, project_id, db)
 
-    db_task = ProjectTaskCreate(
+    db_task = Task(
         title=task.title,
         description=task.description,
         status=task.status,

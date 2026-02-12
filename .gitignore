@@ -1,3 +1,11 @@
+*.db
+log.app
+
+.idea/
+.vscode/
+
+.env*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
